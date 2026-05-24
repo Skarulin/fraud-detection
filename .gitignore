@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+data/raw/
+models/
+.dvc/cache
+.dvc/tmp
+Data_fraud_mlops.csv

@@ -1,0 +1,4 @@
+[core]
+    remote = yadisk
+['remote "yadisk"']
+    url = yadisk://DVC_storage

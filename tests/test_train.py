@@ -2,9 +2,7 @@
 Smoke-тесты для src/train.py
 Запуск: pytest tests/ -v
 """
-import pandas as pd
-import numpy as np
-import pytest
+
 import sys
 import os
 

@@ -38,7 +38,7 @@ file_paths = [os.path.join(DATA_RAW, f) for f in file_names]
 
 missing = [f for f in file_paths if not os.path.isfile(f)]
 if missing:
-    raise FileNotFoundError(f"Следующие файлы не найдены:\n" + "\n".join(missing))
+    raise FileNotFoundError("Следующие файлы не найдены:\n" + "\n".join(missing))
 
 print("✅ Все parquet-файлы найдены.")
 df = pd.concat([pd.read_parquet(f) for f in file_paths], ignore_index=True)

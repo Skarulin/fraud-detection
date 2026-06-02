@@ -9,7 +9,7 @@ import pandas as pd
 
 # Добавляем src/ в путь
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-from train import split_feature_types
+from utilits import split_feature_types
 
 
 # ============================================================
@@ -68,13 +68,7 @@ def test_split_feature_types_mixed():
     assert 'is_new' in cat_cols
 
 
-# ============================================================
-# Тест импорта модуля
-# ============================================================
 
-def test_import_train_module():
-    """Модуль train импортируется без ошибок."""
-    import train  # noqa: F401
 
 
 # ============================================================

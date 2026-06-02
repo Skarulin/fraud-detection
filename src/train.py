@@ -44,6 +44,12 @@ if missing:
 print("✅ Все parquet-файлы найдены.")
 df = pd.concat([pd.read_parquet(f) for f in file_paths], ignore_index=True)
 
+#==============
+#Local mlflow test
+#==============
+#df = df.sample(frac=0.1, random_state=42).reset_index(drop=True)
+#print("Sampled shape:", df.shape)
+
 print("Shape:", df.shape)
 print(df.head())
 print(df.info())
@@ -123,7 +129,7 @@ print('used_pos_weight =', pos_weight)
 # ============================================================
 # ОБУЧЕНИЕ + MLFLOW
 # ============================================================
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment("fraud_detection")
 

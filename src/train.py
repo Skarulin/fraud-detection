@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # headless-режим для CI/CD
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from sklearn.preprocessing import StandardScaler
+import pickle
+import json
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     recall_score,
@@ -14,8 +18,8 @@ from sklearn.metrics import (
     confusion_matrix
 )
 from catboost import CatBoostClassifier
-import pickle
-import json
+import mlflow
+import mlflow.catboost
 
 # ============================================================
 # НАСТРОЙКА ПУТЕЙ
@@ -41,31 +45,34 @@ df = pd.concat([pd.read_parquet(f) for f in file_paths], ignore_index=True)
 
 print("Shape:", df.shape)
 print(df.head())
-
 print(df.info())
 print(df.describe())
-print(df.to_csv('Data_fraud_mlops.csv'))
 print(df.isnull().sum())
 
 target_col = [col for col in df.columns if 'fraud' in col.lower()][0]
 print("Target column:", target_col)
 print(df[target_col].value_counts())
 
-sns.countplot(x=df[target_col])
-plt.title("Class Distribution")
-plt.show()
+# ============================================================
+# EDA-ГРАФИКИ (сохраняются как файлы, не plt.show())
+# ============================================================
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "reports", "figures")
+os.makedirs(PLOTS_DIR, exist_ok=True)
 
-plt.figure(figsize=(12,8))
-sns.heatmap(df.corr(numeric_only=True), cmap='coolwarm')
-plt.title("Correlation Matrix")
-plt.show()
+fig, ax = plt.subplots()
+sns.countplot(x=df[target_col], ax=ax)
+ax.set_title("Class Distribution")
+fig.savefig(os.path.join(PLOTS_DIR, "class_distribution.png"))
+plt.close(fig)
 
-numeric_cols = df.select_dtypes(include=np.number).columns
-df[numeric_cols].hist(figsize=(15,10), bins=30)
-plt.show()
+fig, ax = plt.subplots(figsize=(12, 8))
+sns.heatmap(df.corr(numeric_only=True), cmap='coolwarm', ax=ax)
+ax.set_title("Correlation Matrix")
+fig.savefig(os.path.join(PLOTS_DIR, "correlation_matrix.png"))
+plt.close(fig)
 
 # ============================================================
-# ПОДГОТОВКА ДАННЫХ И ОБУЧЕНИЕ
+# ПОДГОТОВКА ДАННЫХ
 # ============================================================
 df = df.copy()
 target_col = 'is_fraud'
@@ -79,6 +86,7 @@ y = df[target_col]
 
 print(X.shape, y.shape)
 print(y.value_counts())
+
 
 def split_feature_types(X: pd.DataFrame):
     X = X.copy()
@@ -114,15 +122,12 @@ def split_feature_types(X: pd.DataFrame):
 
     return X, cat_cols, continuous_cols
 
+
 X, cat_cols, continuous_cols = split_feature_types(X)
 
 print('Всего признаков:', X.shape[1])
 print('Categorical/Binary:', len(cat_cols))
 print('Continuous:', len(continuous_cols))
-print('\ncat_cols:')
-print(cat_cols)
-print('\ncontinuous_cols:')
-print(continuous_cols)
 
 for col in continuous_cols:
     X[col] = X[col].fillna(X[col].median())
@@ -130,14 +135,13 @@ for col in continuous_cols:
 X_train_full, X_test, y_train_full, y_test = train_test_split(
     X, y, test_size=0.2, stratify=y, random_state=42
 )
-
 X_train, X_valid, y_train, y_valid = train_test_split(
     X_train_full, y_train_full, test_size=0.2, stratify=y_train_full, random_state=42
 )
 
-print('Train:', X_train.shape, y_train.shape)
-print('Valid:', X_valid.shape, y_valid.shape)
-print('Test:', X_test.shape, y_test.shape)
+print('Train:', X_train.shape)
+print('Valid:', X_valid.shape)
+print('Test:', X_test.shape)
 
 neg = (y_train == 0).sum()
 pos = (y_train == 1).sum()
@@ -147,77 +151,129 @@ pos_weight = min(raw_pos_weight, 50)
 print('raw_pos_weight =', raw_pos_weight)
 print('used_pos_weight =', pos_weight)
 
-model = CatBoostClassifier(
-    iterations=500,
-    depth=8,
-    learning_rate=0.05,
-    loss_function='Logloss',
-    eval_metric='PRAUC',
-    class_weights=[1, pos_weight],
-    random_seed=42,
-    verbose=100
-)
+# ============================================================
+# ОБУЧЕНИЕ + MLFLOW
+# ============================================================
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("fraud_detection")
 
-model.fit(
-    X_train, y_train,
-    cat_features=cat_cols,
-    eval_set=(X_valid, y_valid),
-    use_best_model=True
-)
+MODEL_PARAMS = {
+    "iterations": 500,
+    "depth": 8,
+    "learning_rate": 0.05,
+    "loss_function": "Logloss",
+    "eval_metric": "PRAUC",
+    "random_seed": 42,
+}
 
-valid_proba = model.predict_proba(X_valid)[:, 1]
-thresholds = np.arange(0.01, 1.00, 0.01)
-rows = []
+with mlflow.start_run(run_name="catboost_baseline"):
 
-for thr in thresholds:
-    y_pred = (valid_proba >= thr).astype(int)
-    rec = recall_score(y_valid, y_pred, zero_division=0)
-    prec = precision_score(y_valid, y_pred, zero_division=0)
-    f1 = f1_score(y_valid, y_pred, zero_division=0)
-    rows.append({'threshold': thr, 'recall': rec, 'precision': prec, 'f1': f1})
+    # --- Логируем параметры ---
+    mlflow.log_params({
+        **MODEL_PARAMS,
+        "pos_weight": pos_weight,
+        "raw_pos_weight": raw_pos_weight,
+        "train_size": len(X_train),
+        "valid_size": len(X_valid),
+        "test_size": len(X_test),
+        "n_features": X_train.shape[1],
+        "n_cat_features": len(cat_cols),
+    })
 
-thr_df = pd.DataFrame(rows)
-best_row = thr_df.sort_values(['f1', 'precision'], ascending=False).iloc[0]
-best_threshold = float(best_row['threshold'])
+    # --- Обучение ---
+    model = CatBoostClassifier(
+        **MODEL_PARAMS,
+        class_weights=[1, pos_weight],
+        verbose=100
+    )
+    model.fit(
+        X_train, y_train,
+        cat_features=cat_cols,
+        eval_set=(X_valid, y_valid),
+        use_best_model=True
+    )
 
-print('Best threshold:', best_threshold)
-print(best_row)
+    # --- Подбор порога на валидации ---
+    valid_proba = model.predict_proba(X_valid)[:, 1]
+    thresholds = np.arange(0.01, 1.00, 0.01)
+    rows = []
 
-test_proba = model.predict_proba(X_test)[:, 1]
-y_test_pred = (test_proba >= best_threshold).astype(int)
+    for thr in thresholds:
+        y_pred = (valid_proba >= thr).astype(int)
+        rec = recall_score(y_valid, y_pred, zero_division=0)
+        prec = precision_score(y_valid, y_pred, zero_division=0)
+        f1 = f1_score(y_valid, y_pred, zero_division=0)
+        rows.append({'threshold': thr, 'recall': rec, 'precision': prec, 'f1': f1})
 
-test_recall = recall_score(y_test, y_test_pred, zero_division=0)
-test_precision = precision_score(y_test, y_test_pred, zero_division=0)
-test_f1 = f1_score(y_test, y_test_pred, zero_division=0)
-test_roc_auc = roc_auc_score(y_test, test_proba)
-test_pr_auc = average_precision_score(y_test, test_proba)
+    thr_df = pd.DataFrame(rows)
+    best_row = thr_df.sort_values(['f1', 'precision'], ascending=False).iloc[0]
+    best_threshold = float(best_row['threshold'])
 
-print('TEST METRICS')
-print('Recall   :', round(test_recall, 6))
-print('Precision:', round(test_precision, 6))
-print('F1       :', round(test_f1, 6))
-print('ROC-AUC  :', round(test_roc_auc, 6))
-print('PR-AUC   :', round(test_pr_auc, 6))
-print('\nConfusion matrix:')
-print(confusion_matrix(y_test, y_test_pred))
+    print('Best threshold:', best_threshold)
+    mlflow.log_param("best_threshold", best_threshold)
 
-feature_importance = pd.DataFrame({
-    'feature': X_train.columns,
-    'importance': model.get_feature_importance()
-}).sort_values('importance', ascending=False)
+    # --- Метрики на тесте ---
+    test_proba = model.predict_proba(X_test)[:, 1]
+    y_test_pred = (test_proba >= best_threshold).astype(int)
 
-print(feature_importance.head(30))
+    test_recall = recall_score(y_test, y_test_pred, zero_division=0)
+    test_precision = precision_score(y_test, y_test_pred, zero_division=0)
+    test_f1 = f1_score(y_test, y_test_pred, zero_division=0)
+    test_roc_auc = roc_auc_score(y_test, test_proba)
+    test_pr_auc = average_precision_score(y_test, test_proba)
 
-plt.figure(figsize=(10, 5))
-plt.hist(test_proba[y_test == 1], bins=50, alpha=0.5, label='fraud')
-plt.legend()
-plt.xlabel('Predicted probability')
-plt.ylabel('Count')
-plt.title('Probability separation')
-plt.show()
+    print('TEST METRICS')
+    print('Recall   :', round(test_recall, 6))
+    print('Precision:', round(test_precision, 6))
+    print('F1       :', round(test_f1, 6))
+    print('ROC-AUC  :', round(test_roc_auc, 6))
+    print('PR-AUC   :', round(test_pr_auc, 6))
+    print('\nConfusion matrix:')
+    print(confusion_matrix(y_test, y_test_pred))
+
+    mlflow.log_metrics({
+        "test_recall": test_recall,
+        "test_precision": test_precision,
+        "test_f1": test_f1,
+        "test_roc_auc": test_roc_auc,
+        "test_pr_auc": test_pr_auc,
+    })
+
+    # --- Feature importance ---
+    feature_importance = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': model.get_feature_importance()
+    }).sort_values('importance', ascending=False)
+    print(feature_importance.head(30))
+
+    # --- График вероятностей ---
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.hist(test_proba[y_test == 1], bins=50, alpha=0.5, label='fraud')
+    ax.legend()
+    ax.set_xlabel('Predicted probability')
+    ax.set_ylabel('Count')
+    ax.set_title('Probability separation')
+    prob_plot_path = os.path.join(PLOTS_DIR, "probability_separation.png")
+    fig.savefig(prob_plot_path)
+    plt.close(fig)
+
+    # --- Логируем артефакты в MLflow ---
+    mlflow.log_artifact(prob_plot_path)
+    mlflow.log_artifact(os.path.join(PLOTS_DIR, "class_distribution.png"))
+    mlflow.log_artifact(os.path.join(PLOTS_DIR, "correlation_matrix.png"))
+
+    # --- Регистрируем модель ---
+    mlflow.catboost.log_model(
+        model,
+        artifact_path="catboost_model",
+        registered_model_name="fraud_detection_catboost"
+    )
+
+    print(f"✅ MLflow run logged. Run ID: {mlflow.active_run().info.run_id}")
 
 # ============================================================
-# СОХРАНЕНИЕ МОДЕЛИ И АРТЕФАКТОВ (в корень проекта)
+# СОХРАНЕНИЕ АРТЕФАКТОВ ИНФЕРЕНСА (локально, как раньше)
 # ============================================================
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 os.makedirs(MODELS_DIR, exist_ok=True)

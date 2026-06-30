@@ -1,0 +1,32 @@
+# Виртуальное окружение — не нужно в образе, у каждого контейнера своё
+.venv
+venv
+env
+
+# Git и IDE
+.git
+.gitignore
+.idea
+.vscode
+
+# Кэши
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+
+# DVC локальный кэш (данные тянутся через volumes/COPY data/ отдельно)
+.dvc/cache
+.dvc/tmp
+
+# MLflow служебные файлы экспериментов (не нужны внутри образа)
+mlruns
+catboost_info
+src/catboost_info
+
+# Большие/служебные файлы, не нужные в образе
+*.ipynb
+*.ipynb_checkpoints
+notebooks
+.DS_Store
+database.db

@@ -1,0 +1,174 @@
+{
+  "generated_at": "2026-06-30 14:05:15",
+  "seed": 1416719288,
+  "data_drift": {
+    "drift_detected": false,
+    "drift_share": 0.1154,
+    "n_drifted_features": 3,
+    "n_features": 26,
+    "per_feature": [
+      {
+        "feature": "amount",
+        "psi": 0.0009,
+        "ks_p_value": 0.6073,
+        "wasserstein": 6.366,
+        "drift_detected": false
+      },
+      {
+        "feature": "hour",
+        "psi": 0.0007,
+        "ks_p_value": 0.5098,
+        "wasserstein": 0.059,
+        "drift_detected": false
+      },
+      {
+        "feature": "day_of_week",
+        "psi": 0.0003,
+        "ks_p_value": 0.9322,
+        "wasserstein": 0.0114,
+        "drift_detected": false
+      },
+      {
+        "feature": "age",
+        "psi": 0.0013,
+        "ks_p_value": 0.8046,
+        "wasserstein": 0.1336,
+        "drift_detected": false
+      },
+      {
+        "feature": "income",
+        "psi": 0.0014,
+        "ks_p_value": 0.0974,
+        "wasserstein": 301.5893,
+        "drift_detected": false
+      },
+      {
+        "feature": "credit_score",
+        "psi": 0.0004,
+        "ks_p_value": 0.6533,
+        "wasserstein": 1.4533,
+        "drift_detected": false
+      },
+      {
+        "feature": "risk_score",
+        "psi": 0.001,
+        "ks_p_value": 0.7428,
+        "wasserstein": 0.0016,
+        "drift_detected": false
+      },
+      {
+        "feature": "amount_deviation",
+        "psi": 0.0014,
+        "ks_p_value": 0.4154,
+        "wasserstein": 0.0359,
+        "drift_detected": false
+      },
+      {
+        "feature": "time_since_last_tx",
+        "psi": 0.0005,
+        "ks_p_value": 0.9585,
+        "wasserstein": 0.0758,
+        "drift_detected": false
+      },
+      {
+        "feature": "timestamp",
+        "psi": 0.7621,
+        "drift_detected": true
+      },
+      {
+        "feature": "date",
+        "psi": 0.0069,
+        "drift_detected": false
+      },
+      {
+        "feature": "currency",
+        "psi": 0.0001,
+        "drift_detected": false
+      },
+      {
+        "feature": "is_foreign",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "is_online",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "is_night",
+        "psi": 0.0001,
+        "drift_detected": false
+      },
+      {
+        "feature": "is_weekend",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "ip_address",
+        "psi": 0.5343,
+        "drift_detected": true
+      },
+      {
+        "feature": "device_id",
+        "psi": 0.3775,
+        "drift_detected": true
+      },
+      {
+        "feature": "operating_system",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "merchant_category",
+        "psi": 0.0002,
+        "drift_detected": false
+      },
+      {
+        "feature": "merchant_country",
+        "psi": 0.0206,
+        "drift_detected": false
+      },
+      {
+        "feature": "rule_high_amount_night",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "rule_foreign_new_device",
+        "psi": 0.0,
+        "drift_detected": false
+      },
+      {
+        "feature": "rule_high_risk_merchant",
+        "psi": 0.0002,
+        "drift_detected": false
+      },
+      {
+        "feature": "rule_fast_sequence",
+        "psi": 0.0003,
+        "drift_detected": false
+      },
+      {
+        "feature": "rule_country_change",
+        "psi": 0.0001,
+        "drift_detected": false
+      }
+    ]
+  },
+  "target_drift": {
+    "drift_detected": false,
+    "psi": 0.001,
+    "ks_p_value": 0.3345,
+    "wasserstein": 0.002
+  },
+  "concept_drift": {
+    "drift_detected": false,
+    "pr_auc_drop": -0.0555,
+    "reference_pr_auc": 0.1291,
+    "current_pr_auc": 0.1846,
+    "reference_recall": 0.4268,
+    "current_recall": 0.4419
+  }
+}

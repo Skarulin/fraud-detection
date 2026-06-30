@@ -7,3 +7,8 @@ models/
 .dvc/cache
 .dvc/tmp
 Data_fraud_mlops.csv
+/models
+.pytest_cache
+.ruff_cache
+mlruns
+database.db

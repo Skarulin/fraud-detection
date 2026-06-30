@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring
+  namespace: fraud-detection
+  labels:
+    app: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitoring
+  template:
+    metadata:
+      labels:
+        app: monitoring
+    spec:
+      containers:
+        - name: monitoring
+          image: fraud-monitoring:latest   # собирается локально в Minikube, см. README
+          imagePullPolicy: IfNotPresent
+          args: ["--mode", "serve", "--sample", "50000", "--interval", "300"]
+          ports:
+            - containerPort: 9200
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring
+  namespace: fraud-detection
+spec:
+  selector:
+    app: monitoring
+  ports:
+    - port: 9200
+      targetPort: 9200
+  type: ClusterIP

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Last Predictions</h1>
+
+<table>
+<tr>
+<th>ID</th>
+<th>Probability</th>
+<th>Prediction</th>
+<th>Anomaly</th>
+</tr>
+{% for row in predictions %}
+<tr>
+<td>{{ row.id }}</td>
+<td>{{ row.probability }}</td>
+<td>{{ row.prediction }}</td>
+<td>{{ row.anomaly }}</td>
+</tr>
+{% endfor %}
+</table>
+</body>
+</html>

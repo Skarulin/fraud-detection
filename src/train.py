@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     recall_score,
@@ -16,7 +13,8 @@ from sklearn.metrics import (
 from catboost import CatBoostClassifier
 import pickle
 import json
-
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # НАСТРОЙКА ПУТЕЙ
 # ============================================================
@@ -34,7 +32,7 @@ file_paths = [os.path.join(DATA_RAW, f) for f in file_names]
 
 missing = [f for f in file_paths if not os.path.isfile(f)]
 if missing:
-    raise FileNotFoundError(f"Следующие файлы не найдены:\n" + "\n".join(missing))
+    raise FileNotFoundError("Следующие файлы не найдены:\n" + "\n".join(missing))
 
 print("✅ Все parquet-файлы найдены.")
 df = pd.concat([pd.read_parquet(f) for f in file_paths], ignore_index=True)
@@ -51,18 +49,18 @@ target_col = [col for col in df.columns if 'fraud' in col.lower()][0]
 print("Target column:", target_col)
 print(df[target_col].value_counts())
 
-sns.countplot(x=df[target_col])
-plt.title("Class Distribution")
-plt.show()
+#sns.countplot(x=df[target_col])
+#plt.title("Class Distribution")
+#plt.show()
 
-plt.figure(figsize=(12,8))
-sns.heatmap(df.corr(numeric_only=True), cmap='coolwarm')
-plt.title("Correlation Matrix")
-plt.show()
+# plt.figure(figsize=(12,8))
+# sns.heatmap(df.corr(numeric_only=True), cmap='coolwarm')
+# plt.title("Correlation Matrix")
+# plt.show()
 
 numeric_cols = df.select_dtypes(include=np.number).columns
-df[numeric_cols].hist(figsize=(15,10), bins=30)
-plt.show()
+# df[numeric_cols].hist(figsize=(15,10), bins=30)
+# plt.show()
 
 # ============================================================
 # ПОДГОТОВКА ДАННЫХ И ОБУЧЕНИЕ
@@ -208,13 +206,13 @@ feature_importance = pd.DataFrame({
 
 print(feature_importance.head(30))
 
-plt.figure(figsize=(10, 5))
-plt.hist(test_proba[y_test == 1], bins=50, alpha=0.5, label='fraud')
-plt.legend()
-plt.xlabel('Predicted probability')
-plt.ylabel('Count')
-plt.title('Probability separation')
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.hist(test_proba[y_test == 1], bins=50, alpha=0.5, label='fraud')
+# plt.legend()
+# plt.xlabel('Predicted probability')
+# plt.ylabel('Count')
+# plt.title('Probability separation')
+# plt.show()
 
 # ============================================================
 # СОХРАНЕНИЕ МОДЕЛИ И АРТЕФАКТОВ (в корень проекта)
@@ -244,3 +242,6 @@ with open(os.path.join(MODELS_DIR, "metrics.json"), 'w') as f:
     json.dump(inference_artifacts['metrics'], f, indent=2)
 
 print(f"✅ Model and artifacts saved to {MODELS_DIR}")
+
+if __name__ == "__main__":
+    print("START TRAINING")

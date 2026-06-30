@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drift Monitoring</title>
+</head>
+<body>
+<h1>Drift Monitoring</h1>
+{% if drift.drift_detected %}
+    <h2 style="color:red;">DRIFT DETECTED</h2>
+{% else %}
+    <h2 style="color:green;">No drift detected</h2>
+{% endif %}
+<p>Drift score: {{ drift.score }}</p>
+</body>
+</html>

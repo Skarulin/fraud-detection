@@ -1,0 +1,26 @@
+# ArgoCD Application — CD-часть проекта.
+# ArgoCD следит за git-репозиторием и автоматически синхронизирует
+# k8s-манифесты (папка k8s/) с состоянием кластера. Любой коммит в main,
+# меняющий что-то в k8s/, сам доедет до кластера без ручного kubectl apply.
+#
+# ВАЖНО: поменяй repoURL на адрес твоего git-репозитория перед применением.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fraud-detection
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Skarulin/fraud-detection.git   # <-- ЗАМЕНИ на свой репо
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fraud-detection
+  syncPolicy:
+    automated:
+      prune: true       # удалять ресурсы, убранные из git
+      selfHeal: true    # откатывать ручные правки кластера к состоянию из git
+    syncOptions:
+      - CreateNamespace=true
